@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>HLS Player - Kanallar</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #111;
+      color: #fff;
+    }
+    video {
+      width: 80%;
+      max-width: 800px;
+      margin-top: 20px;
+      border: 2px solid #444;
+      border-radius: 10px;
+      background: black;
+    }
+    select {
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 20px;
+      border: none;
+      font-size: 16px;
+    }
+    .status {
+      margin-top: 12px;
+      color: #ccc;
+      font-size: 14px;
+    }
+    .error {
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <h1>HTTP Live Streaming Player</h1>
+
+  <select id="channels">
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivebs1.m3u8">Bein Sports 1</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivebs2.m3u8">Bein Sports 2</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivebs3.m3u8">Bein Sports 3</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivebs4.m3u8">Bein Sports 4</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivebs5.m3u8">Bein Sports 5</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivebsm1.m3u8">Bein Sports max1</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivebsm2.m3u8">Bein Sports max2</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivess1.m3u8">s sport 1</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivess2.m3u8">s sport 2</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivets.m3u8">tivibu</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivets1.m3u8">tivibu 1</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivets2.m3u8">tivibu 2</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivets3.m3u8">tivibu 3</option>
+    <option value="https://api.codetabs.com/v1/proxy/?quest=https://andro.okan11gote12sokan.cfd/checklist/androstreamlivets4.m3u8">tivibu 4</option>
+    <option value="https://wandering-pond-ff44.sadjj2390092.workers.dev/checklist/androstreamlivesm1.m3u8">spor smart 1</option>
+    <option value="https://wandering-pond-ff44.sadjj2390092.workers.dev/checklist/androstreamlivesm2.m3u8">spor smart 2</option>
+    <option value="http://92.113.151.217/bein3/index.m3u8">Bein Sports 3 (direct)</option>
+    <option value="http://92.113.151.217/bs1/index.m3u8">Bein Sports 1 (direct)</option>
+    <option value="http://92.113.151.217/3000/index.m3u8">Bein Sports 3 (alt)</option>
+    <option value="https://wandering-pond-ff44.sadjj2390092.workers.dev/checklist/androstreamlivebiraz1.m3u8">Bein Sports 4 (alt)</option>
+  </select>
+
+  <br>
+  <video id="video" controls autoplay muted playsinline></video>
+
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+
+  <script>
+    // Geliştirilmiş HLS oynatma: önceki Hls örneğini destroy eder, hata yönetimi ekler.
+    const video = document.getElementById('video');
+    const select = document.getElementById('channels');
+    const statusEl = document.getElementById('status');
+
+    let hls = null;
+
+    function setStatus(text, isError = false) {
+      statusEl.textContent = text;
+      statusEl.className = 'status' + (isError ? ' error' : '');
+    }
+
+    function cleanup() {
+      // Hls örneğini temizle
+      if (hls) {
+        try { hls.destroy(); } catch (e) { console.warn('hls.destroy hata', e); }
+        hls = null;
+      }
+      // Tarayıcı video kaynağını sıfırla
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      } catch (e) { /* ignore */ }
+    }
+
+    function playChannel() {
+      const url = select.value;
+      setStatus('Yükleniyor: ' + select.options[select.selectedIndex].text);
+
+      // Temizle ve yeni oynat
+      cleanup();
+
+      // Bazı tarayıcılarda autoplay engellenebilir; muted ile deniyoruz.
+      video.muted = true;
+
+      if (window.Hls && Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+          video.play().then(() => {
+            setStatus('Oynatılıyor: ' + select.options[select.selectedIndex].text);
+          }).catch((err) => {
+            setStatus('Oynatma başlatılamadı (autoplay engellenmiş olabilir).', true);
+            console.warn('play hata', err);
+          });
+        });
+
+        hls.on(Hls.Events.ERROR, function(event, data) {
+          console.error('HLS Hata', event, data);
+          if (data && data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                setStatus('Ağ hatası: kaynak yüklenemiyor.', true);
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                setStatus('Medya hatası: yeniden başlatılıyor...', true);
+                hls.recoverMediaError();
+                break;
+              default:
+                setStatus('Ciddi hata oluştu. Lütfen başka bir kaynağı deneyin.', true);
+                hls.destroy();
+                hls = null;
+                break;
+            }
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari ve iOS WebKit fallback
+        video.src = url;
+        video.addEventListener('loadedmetadata', function once() {
+          video.play().then(() => {
+            setStatus('Oynatılıyor (native): ' + select.options[select.selectedIndex].text);
+          }).catch(() => {
+            setStatus('Oynatma başlatılamadı (autoplay engellenmiş olabilir).', true);
+          });
+          video.removeEventListener('loadedmetadata', once);
+        });
+      } else {
+        setStatus('Bu tarayıcı HLS desteklemiyor!', true);
+        alert("Bu tarayıcı HLS desteklemiyor!");
+      }
+    }
+
+    select.addEventListener('change', playChannel);
+
+    // İlk kanal otomatik oynasın
+    playChannel();
+
+    // Sayfa kapatılırken temizle
+    window.addEventListener('beforeunload', cleanup);
+  </script>
+</body>
+</html>
